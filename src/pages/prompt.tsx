@@ -48,7 +48,7 @@ export default function Prompt() {
       setLoading(true)
       
       const { data, error } = await supabase
-        .from('ogx_system_prompt')
+        .from('g2d_systemprompt')
         .select('*')
         .single()
       
@@ -80,7 +80,7 @@ export default function Prompt() {
       if (currentPromptId) {
         // Update existing prompt
         const { error } = await supabase
-          .from('ogx_system_prompt')
+          .from('g2d_systemprompt')
           .update({
             prompt,
             updated_at: new Date().toISOString()
@@ -93,7 +93,7 @@ export default function Prompt() {
       } else {
         // Insert new prompt
         const { error } = await supabase
-          .from('ogx_system_prompt')
+          .from('g2d_systemprompt')
           .insert([{
             prompt,
             created_by: session?.user.id

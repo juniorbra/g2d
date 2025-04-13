@@ -51,7 +51,7 @@ export default function BaseDeConhecimento() {
       setLoading(true)
       
       const { data, error } = await supabase
-        .from('ogx_knowledge_base')
+        .from('g2d_kbase')
         .select('*')
         .order('created_at', { ascending: false })
       
@@ -82,7 +82,7 @@ export default function BaseDeConhecimento() {
       if (editingId) {
         // Update existing entry
         const { error } = await supabase
-          .from('ogx_knowledge_base')
+          .from('g2d_kbase')
           .update({
             question: pergunta,
             answer: resposta,
@@ -97,7 +97,7 @@ export default function BaseDeConhecimento() {
       } else {
         // Insert new entry
         const { error } = await supabase
-          .from('ogx_knowledge_base')
+          .from('g2d_kbase')
           .insert([{
             question: pergunta,
             answer: resposta,
@@ -109,25 +109,7 @@ export default function BaseDeConhecimento() {
         setMessage({ text: 'Entrada adicionada com sucesso!', type: 'success' })
       }
 
-      // Notify webhook
-      try {
-        await fetch('https://webhooks.botvance.com.br/webhook/5e16d45c-43af-ogx-medical-atualiza-kb', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: editingId ? 'update' : 'create',
-            data: {
-              question: pergunta,
-              answer: resposta
-            }
-          })
-        })
-      } catch (webhookError) {
-        console.error('Erro ao notificar webhook:', webhookError)
-        // Não interrompe o fluxo principal se o webhook falhar
-      }
+      // Webhook notification removed for G2D Consultoria
       
       // Reset form and refresh entries
       setPergunta('')
@@ -156,7 +138,7 @@ export default function BaseDeConhecimento() {
       setLoading(true)
       
       const { error } = await supabase
-        .from('ogx_knowledge_base')
+        .from('g2d_kbase')
         .delete()
         .eq('id', id)
       

@@ -10,10 +10,7 @@ type Profile = {
   birth_date: string | null
   phone: string | null
   address: string | null
-  profile_type: 'patient' | 'doctor' | 'admin'
-  specialty: string | null
-  license_number: string | null
-  avatar_url: string | null
+  updated_at: string
 }
 
 export default function Profile() {
@@ -57,7 +54,7 @@ export default function Profile() {
       setLoading(true)
       
       const { data, error } = await supabase
-        .from('ogx_profiles')
+        .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .single()
@@ -73,8 +70,8 @@ export default function Profile() {
       } else {
         // Create a new profile if it doesn't exist
         const { error: insertError } = await supabase
-          .from('ogx_profiles')
-          .insert([{ id: session.user.id, profile_type: 'patient' }])
+          .from('profiles')
+          .insert([{ id: session.user.id }])
         
         if (insertError) throw insertError
       }
@@ -92,7 +89,7 @@ export default function Profile() {
       setLoading(true)
       
       const { error } = await supabase
-        .from('ogx_profiles')
+        .from('profiles')
         .update({
           full_name: fullName,
           birth_date: birthDate || null,

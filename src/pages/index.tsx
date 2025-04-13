@@ -58,7 +58,7 @@ export default function Home() {
           <Navbar session={session} />
           <div className="p-8 max-w-7xl mx-auto">
             <div className="text-center">
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">Bem-vindo ao Sistema de Configuração de Agente IA</h1>
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Bem-vindo ao Sistema de Configuração de Agente IA da G2D Consultoria</h1>
               <p className="text-lg text-gray-600 mb-8">Você está sendo redirecionado para a página de configuração...</p>
             </div>
           </div>

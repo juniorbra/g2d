@@ -1,6 +1,6 @@
-# OGX Medical - Configurador de Agente IA
+# G2D Consultoria - Configurador de Agente IA
 
-Sistema para configuração de um agente de IA para a OGX Medical, empresa que vende insumos médicos para clínicas de estética. O sistema permite gerenciar prompts e base de conhecimento do agente.
+Sistema para configuração de um agente de IA para a G2D Consultoria. O sistema permite gerenciar prompts e base de conhecimento do agente.
 
 ## Configuração do Projeto
 
@@ -27,11 +27,13 @@ NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon_do_supabase
 ```
 
+> **Nota**: Certifique-se de criar um projeto no Supabase e obter as credenciais necessárias.
+
 ### Configuração do Banco de Dados Supabase
 
 1. Crie um novo projeto no Supabase
 2. Vá para a seção SQL Editor no painel do Supabase
-3. Crie uma nova query e cole o conteúdo do arquivo `supabase/migrations/20250330_initial_schema.sql`
+3. Crie uma nova query e cole o conteúdo do arquivo `supabase/migrations/20250413_g2d_schema.sql`
 4. Execute a query para criar todas as tabelas e configurações necessárias
 
 #### Usuários de Teste
@@ -53,9 +55,9 @@ Alternativamente, você pode criar usuários através da interface de cadastro d
 
 O esquema do banco de dados inclui:
 
-- **profiles**: Informações adicionais dos usuários
-- **ogx_medical**: Tabela para armazenar conhecimentos médicos (prompt e conhecimento)
-- **test**: Tabela simples para testar a conexão
+- **profiles**: Informações dos usuários
+- **g2d_kbase**: Tabela para armazenar a base de conhecimento (perguntas e respostas)
+- **g2d_systemprompt**: Tabela para armazenar o prompt do sistema
 
 ### Executando o Projeto
 
@@ -81,7 +83,7 @@ Acesse http://localhost:3000 no seu navegador.
 - Cadastro de prompts e base de conhecimento para o agente
 - Visualização de todos os prompts e conhecimentos cadastrados
 - Edição e exclusão de entradas existentes
-- Personalização do comportamento do agente de IA para atendimento a clínicas de estética
+- Personalização do comportamento do agente de IA
 
 ## Estrutura do Projeto
 
