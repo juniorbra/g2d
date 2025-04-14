@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   web:
-    image: ghcr.io/juniorbra/g2d:latest
+    image: hvidigaljr/g2d:latest
     networks:
       - portainer
     deploy:
