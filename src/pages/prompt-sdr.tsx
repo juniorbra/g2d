@@ -188,19 +188,6 @@ export default function PromptSDR() {
             
             <div className="flex items-center justify-end">
               <button
-                type="button"
-                onClick={() => {
-                  if (confirm('Descartar alterações não salvas?')) {
-                    fetchCurrentPrompt()
-                    setMessage(null)
-                  }
-                }}
-                disabled={loading}
-                className="mr-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              >
-                Cancelar
-              </button>
-              <button
                 type="submit"
                 disabled={loading}
                 className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
