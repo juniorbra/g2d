@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuração padrão do Next.js
+  // Configuração para output standalone (necessário para Docker)
+  output: 'standalone',
+  
+  // Outras configurações
+  reactStrictMode: true,
+  swcMinify: true,
 }
 
 module.exports = nextConfig

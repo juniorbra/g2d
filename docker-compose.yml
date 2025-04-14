@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  web:
+    image: hvidigaljr/g2d:latest
+    networks:
+      - portainer
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.g2d.rule=Host(`g2d.zobot.top`)
+        - traefik.http.routers.g2d.entrypoints=websecure
+        - traefik.http.routers.g2d.tls.certresolver=letsencryptresolver
+        - traefik.http.services.g2d.loadbalancer.server.port=3000
+        - traefik.http.services.g2d.loadbalancer.passHostHeader=true
+        - traefik.http.routers.g2d.service=g2d
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+
+networks:
+  portainer:
+    external: true
+    name: portainer
