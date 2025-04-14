@@ -13,7 +13,7 @@ services:
           - node.role == manager
       labels:
         - traefik.enable=true
-        - traefik.http.routers.g2d.rule=Host(`g2d.zobot.top`)
+        - traefik.http.routers.g2d.rule=Host(`g2dconsult.zobot.top`)
         - traefik.http.routers.g2d.entrypoints=websecure
         - traefik.http.routers.g2d.tls.certresolver=letsencryptresolver
         - traefik.http.services.g2d.loadbalancer.server.port=3000
