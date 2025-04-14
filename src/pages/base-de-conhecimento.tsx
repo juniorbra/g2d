@@ -109,7 +109,25 @@ export default function BaseDeConhecimento() {
         setMessage({ text: 'Entrada adicionada com sucesso!', type: 'success' })
       }
 
-      // Webhook notification removed for G2D Consultoria
+      // Webhook notification
+      try {
+        await fetch('https://webhooks.botvance.com.br/webhook/5e16d45c-43af-g2d-consult-atualiza-kb', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: pergunta,
+            answer: resposta,
+            action: editingId ? 'update' : 'create',
+            entryId: editingId || 'new'
+          })
+        });
+        console.log('Webhook de notificação enviado com sucesso');
+      } catch (webhookError) {
+        console.error('Erro ao enviar webhook de notificação:', webhookError);
+        // Continue with the process even if webhook fails
+      }
       
       // Reset form and refresh entries
       setPergunta('')
