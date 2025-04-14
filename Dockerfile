@@ -1,53 +1,46 @@
-FROM node:18-alpine AS base
-
-# Instalar dependências necessárias
-RUN apk add --no-cache libc6-compat
+# Usar uma imagem Node.js mais completa
+FROM node:18 as builder
 
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar arquivos de configuração
-COPY package.json package-lock.json ./
+# Copiar package.json e package-lock.json
+COPY package*.json ./
 
 # Instalar dependências
-FROM base AS deps
-# Instalar todas as dependências, incluindo as de desenvolvimento
-RUN npm ci --include=dev
+RUN npm install
 
-# Construir a aplicação
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
+# Copiar o restante dos arquivos
 COPY . .
 
-# Criar um arquivo .env.production com variáveis de ambiente vazias para o build
-RUN echo "NEXT_PUBLIC_SUPABASE_URL=" > .env.production
-RUN echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=" >> .env.production
+# Criar arquivo .env.local vazio para o build
+RUN touch .env.local
 
-# Executar o build
+# Modificar next.config.js para garantir que o build funcione
+RUN sed -i 's/output: .standalone.,/\/\/ output: "standalone",/' next.config.js
+
+# Construir a aplicação
 RUN npm run build
 
-# Configurar a aplicação para produção
-FROM base AS runner
-ENV NODE_ENV production
+# Imagem de produção
+FROM node:18-alpine
 
-# Criar usuário não-root para produção
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Definir variáveis de ambiente
+ENV NODE_ENV production
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
 
 # Copiar arquivos necessários
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Mudar para o usuário não-root
-USER nextjs
 
 # Expor a porta
 EXPOSE 3000
 
-# Definir variáveis de ambiente
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
 # Comando para iniciar a aplicação
-CMD ["node", "server.js"]
+CMD ["npm", "start"]
