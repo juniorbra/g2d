@@ -10,7 +10,7 @@ out
 
 # Arquivos de ambiente
 .env
-.env.local
+# .env.local (commented out to allow it in the build)
 .env.development.local
 .env.test.local
 .env.production.local

@@ -13,8 +13,8 @@ RUN npm install
 # Copiar o restante dos arquivos
 COPY . .
 
-# Criar arquivo .env.local vazio para o build
-RUN touch .env.local
+# Copiar arquivo .env.local para o build
+COPY .env.local .env.local
 
 # Modificar next.config.js para garantir que o build funcione
 RUN sed -i 's/output: .standalone.,/\/\/ output: "standalone",/' next.config.js
