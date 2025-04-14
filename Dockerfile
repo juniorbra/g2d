@@ -11,12 +11,19 @@ COPY package.json package-lock.json ./
 
 # Instalar dependências
 FROM base AS deps
-RUN npm ci
+# Instalar todas as dependências, incluindo as de desenvolvimento
+RUN npm ci --include=dev
 
 # Construir a aplicação
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Criar um arquivo .env.production com variáveis de ambiente vazias para o build
+RUN echo "NEXT_PUBLIC_SUPABASE_URL=" > .env.production
+RUN echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=" >> .env.production
+
+# Executar o build
 RUN npm run build
 
 # Configurar a aplicação para produção
