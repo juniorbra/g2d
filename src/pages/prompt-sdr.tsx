@@ -22,25 +22,33 @@ export default function PromptSDR() {
   const router = useRouter()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (!session) {
-        router.push('/')
-      } else {
-        fetchCurrentPrompt()
-      }
-    })
+    try {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session)
+        if (!session) {
+          router.push('/')
+        } else {
+          fetchCurrentPrompt()
+        }
+      }).catch(err => {
+        console.error("Erro na autenticação:", err)
+        setMessage({ text: "Erro na autenticação. Tente novamente.", type: 'error' })
+      })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      if (!session) {
-        router.push('/')
-      }
-    })
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session)
+        if (!session) {
+          router.push('/')
+        }
+      })
 
-    return () => subscription.unsubscribe()
+      return () => subscription.unsubscribe()
+    } catch (err) {
+      console.error("Erro no useEffect:", err)
+      setMessage({ text: "Ocorreu um erro inesperado. Tente novamente.", type: 'error' })
+    }
   }, [router])
 
   const fetchCurrentPrompt = async () => {
@@ -49,18 +57,29 @@ export default function PromptSDR() {
       
       const { data, error } = await supabase
         .from('g2d_systemprompt')
-        .select('*')
-        .single()
+        .select('id, prompt_sdr')
+        .limit(1)
       
-      if (error && error.code !== 'PGRST116') throw error
+      if (error) {
+        console.error('Erro ao buscar prompt SDR:', error.message)
+        throw error
+      }
       
-      if (data) {
-        setPromptSdr(data.prompt_sdr)
-        setCurrentPromptId(data.id)
+      if (data && data.length > 0) {
+        setPromptSdr(data[0].prompt_sdr || '')
+        setCurrentPromptId(data[0].id)
+      } else {
+        // Nenhum prompt encontrado, deixa os campos vazios para criar um novo
+        setPromptSdr('')
+        setCurrentPromptId(null)
+        console.log('Nenhum prompt SDR encontrado. Pronto para criar um novo.')
       }
     } catch (error: any) {
       console.error('Erro ao buscar prompt SDR:', error.message)
-      setMessage({ text: `Erro ao buscar dados: ${error.message}`, type: 'error' })
+      setMessage({ 
+        text: `Não foi possível carregar o prompt SDR. ${error.code === 'PGRST116' ? 'Nenhum registro encontrado.' : 'Tente novamente mais tarde.'}`, 
+        type: 'error' 
+      })
     } finally {
       setLoading(false)
     }
@@ -74,6 +93,11 @@ export default function PromptSDR() {
       return
     }
     
+    // Confirmação antes de salvar
+    if (!confirm('Tem certeza que deseja salvar as alterações?')) {
+      return
+    }
+    
     try {
       setLoading(true)
       
@@ -82,12 +106,15 @@ export default function PromptSDR() {
         const { error } = await supabase
           .from('g2d_systemprompt')
           .update({
-            prompt_sdr: promptSdr,
-            updated_at: new Date().toISOString()
+            prompt_sdr: promptSdr
+            // Removido updated_at: new Date().toISOString() - já é tratado pelo trigger no banco
           })
           .eq('id', currentPromptId)
         
-        if (error) throw error
+        if (error) {
+          console.error('Erro ao atualizar prompt SDR:', error)
+          throw error
+        }
         
         setMessage({ text: 'Prompt SDR atualizado com sucesso!', type: 'success' })
       } else {
@@ -95,17 +122,25 @@ export default function PromptSDR() {
         const { error } = await supabase
           .from('g2d_systemprompt')
           .insert([{
+            prompt: '', // Valor padrão para o campo obrigatório
             prompt_sdr: promptSdr,
             created_by: session?.user.id
           }])
         
-        if (error) throw error
+        if (error) {
+          console.error('Erro ao inserir prompt SDR:', error)
+          throw error
+        }
         
         setMessage({ text: 'Prompt SDR adicionado com sucesso!', type: 'success' })
         fetchCurrentPrompt() // Atualiza para pegar o ID do novo prompt
       }
     } catch (error: any) {
-      setMessage({ text: error.message, type: 'error' })
+      console.error('Erro ao salvar prompt SDR:', error)
+      setMessage({ 
+        text: `Não foi possível salvar o prompt SDR. Por favor, tente novamente mais tarde.`, 
+        type: 'error' 
+      })
     } finally {
       setLoading(false)
     }
@@ -127,7 +162,14 @@ export default function PromptSDR() {
           </div>
         )}
         
-        <div className="bg-white shadow-md rounded p-6 mb-6">
+        {loading && (
+          <div className="bg-white shadow-md rounded p-6 mb-6 flex justify-center items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span className="ml-2">Carregando...</span>
+          </div>
+        )}
+        
+        <div className={`bg-white shadow-md rounded p-6 mb-6 ${loading ? 'opacity-50' : ''}`}>
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
               <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -145,6 +187,19 @@ export default function PromptSDR() {
             </div>
             
             <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Descartar alterações não salvas?')) {
+                    fetchCurrentPrompt()
+                    setMessage(null)
+                  }
+                }}
+                disabled={loading}
+                className="mr-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              >
+                Cancelar
+              </button>
               <button
                 type="submit"
                 disabled={loading}
