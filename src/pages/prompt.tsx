@@ -27,7 +27,8 @@ export default function Prompt() {
       if (!session) {
         router.push('/')
       } else {
-        fetchCurrentPrompt()
+        // Passar a sessão diretamente para a função em vez de usar o estado
+        fetchCurrentPrompt(session)
       }
     })
 
@@ -43,47 +44,38 @@ export default function Prompt() {
     return () => subscription.unsubscribe()
   }, [router])
 
-  const fetchCurrentPrompt = async () => {
+  const fetchCurrentPrompt = async (currentSession = session) => {
     try {
       setLoading(true)
       
-      // Get user ID from auth.users table using the authenticated email
-      const userEmail = session?.user.email;
-      
-      if (!userEmail) {
-        throw new Error('Email do usuário não disponível');
+      if (!currentSession?.user?.id) {
+        console.error('ID do usuário não disponível na sessão');
+        throw new Error('ID do usuário não disponível. Por favor, faça login novamente.');
       }
       
-      // Get user ID from auth.users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userEmail)
-        .single();
+      const userId = currentSession.user.id;
+      console.log('Usando ID do usuário da sessão:', userId);
       
-      if (userError) {
-        console.error('Erro ao buscar ID do usuário:', userError.message);
-        throw userError;
-      }
-      
-      if (!userData) {
-        throw new Error('Usuário não encontrado');
-      }
-      
-      const userId = userData.id;
-      
-      // Fetch prompt using the user ID
+      // Fetch prompt using the user ID from profiles
       const { data, error } = await supabase
         .from('prompt')
         .select('*')
         .eq('created_by', userId)
         .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro na consulta do prompt:', error);
+        throw error;
+      }
       
       if (data) {
-        setPrompt(data.prompt)
+        console.log('Prompt encontrado:', data.id);
+        setPrompt(data.prompt || '')
         setCurrentPromptId(data.id)
+      } else {
+        console.log('Nenhum prompt encontrado para o usuário');
+        setPrompt('')
+        setCurrentPromptId(null)
       }
     } catch (error: any) {
       console.error('Erro ao buscar prompt do sistema:', error.message)
@@ -104,30 +96,13 @@ export default function Prompt() {
     try {
       setLoading(true)
       
-      // Get user ID from auth.users table using the authenticated email
-      const userEmail = session?.user.email;
-      
-      if (!userEmail) {
-        throw new Error('Email do usuário não disponível');
+      if (!session?.user?.id) {
+        throw new Error('ID do usuário não disponível. Por favor, faça login novamente.');
       }
       
-      // Get user ID from auth.users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userEmail)
-        .single();
-      
-      if (userError) {
-        console.error('Erro ao buscar ID do usuário:', userError.message);
-        throw userError;
-      }
-      
-      if (!userData) {
-        throw new Error('Usuário não encontrado');
-      }
-      
-      const userId = userData.id;
+      const userId = session.user.id;
+      console.log('Usando ID do usuário da sessão:', userId);
+      console.log('Salvando prompt para o usuário ID:', userId);
       
       // Check if user already has a prompt entry
       const { data: existingPrompt, error: checkError } = await supabase
@@ -136,9 +111,13 @@ export default function Prompt() {
         .eq('created_by', userId)
         .maybeSingle();
       
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error('Erro ao verificar prompt existente:', checkError);
+        throw checkError;
+      }
       
       if (existingPrompt) {
+        console.log('Atualizando prompt existente:', existingPrompt.id);
         // Update existing prompt
         const { error } = await supabase
           .from('prompt')
@@ -148,10 +127,14 @@ export default function Prompt() {
           })
           .eq('id', existingPrompt.id);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao atualizar prompt:', error);
+          throw error;
+        }
         
         setMessage({ text: 'Prompt do sistema atualizado com sucesso!', type: 'success' });
       } else {
+        console.log('Criando novo prompt para o usuário');
         // Insert new prompt
         const { error } = await supabase
           .from('prompt')
@@ -160,7 +143,10 @@ export default function Prompt() {
             created_by: userId
           }]);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao inserir prompt:', error);
+          throw error;
+        }
         
         setMessage({ text: 'Prompt do sistema adicionado com sucesso!', type: 'success' });
       }
@@ -168,6 +154,7 @@ export default function Prompt() {
       // Refresh to get the latest data
       fetchCurrentPrompt();
     } catch (error: any) {
+      console.error('Erro ao salvar prompt:', error);
       setMessage({ text: error.message, type: 'error' })
     } finally {
       setLoading(false)

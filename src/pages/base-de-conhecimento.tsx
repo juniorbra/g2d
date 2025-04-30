@@ -30,7 +30,8 @@ export default function BaseDeConhecimento() {
       if (!session) {
         router.push('/')
       } else {
-        fetchEntries()
+        // Passar a sessão diretamente para a função em vez de usar o estado
+        fetchEntries(session)
       }
     })
 
@@ -46,45 +47,33 @@ export default function BaseDeConhecimento() {
     return () => subscription.unsubscribe()
   }, [router])
 
-  const fetchEntries = async () => {
+  const fetchEntries = async (currentSession = session) => {
     try {
       setLoading(true)
       
-      // Get user ID from auth.users table using the authenticated email
-      const userEmail = session?.user.email;
-      
-      if (!userEmail) {
-        throw new Error('Email do usuário não disponível');
+      if (!currentSession?.user?.id) {
+        console.error('ID do usuário não disponível na sessão');
+        throw new Error('ID do usuário não disponível. Por favor, faça login novamente.');
       }
       
-      // Get user ID from auth.users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userEmail)
-        .single();
+      const userId = currentSession.user.id;
+      console.log('Usando ID do usuário da sessão:', userId);
+      console.log('Buscando entradas para o usuário ID:', userId);
       
-      if (userError) {
-        console.error('Erro ao buscar ID do usuário:', userError.message);
-        throw userError;
-      }
-      
-      if (!userData) {
-        throw new Error('Usuário não encontrado');
-      }
-      
-      const userId = userData.id;
-      
-      // Fetch entries using the user ID
+      // Fetch entries using the user ID from profiles
       const { data, error } = await supabase
         .from('kbase')
         .select('*')
         .eq('created_by', userId)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na consulta da base de conhecimento:', error);
+        throw error;
+      }
       
       if (data) {
+        console.log(`${data.length} entradas encontradas para o usuário`);
         setEntries(data);
       }
     } catch (error: any) {
@@ -107,30 +96,13 @@ export default function BaseDeConhecimento() {
       setLoading(true)
       
       if (editingId) {
-        // Get user ID from auth.users table using the authenticated email
-        const userEmail = session?.user.email;
-        
-        if (!userEmail) {
-          throw new Error('Email do usuário não disponível');
+        if (!session?.user?.id) {
+          throw new Error('ID do usuário não disponível. Por favor, faça login novamente.');
         }
         
-        // Get user ID from auth.users table
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', userEmail)
-          .single();
-        
-        if (userError) {
-          console.error('Erro ao buscar ID do usuário:', userError.message);
-          throw userError;
-        }
-        
-        if (!userData) {
-          throw new Error('Usuário não encontrado');
-        }
-        
-        const userId = userData.id;
+        const userId = session.user.id;
+        console.log('Usando ID do usuário da sessão:', userId);
+        console.log('Atualizando entrada:', editingId, 'para o usuário ID:', userId);
         
         // Update existing entry
         const { error } = await supabase
@@ -148,30 +120,13 @@ export default function BaseDeConhecimento() {
         setMessage({ text: 'Entrada atualizada com sucesso!', type: 'success' })
         setEditingId(null)
       } else {
-        // Get user ID from auth.users table using the authenticated email
-        const userEmail = session?.user.email;
-        
-        if (!userEmail) {
-          throw new Error('Email do usuário não disponível');
+        if (!session?.user?.id) {
+          throw new Error('ID do usuário não disponível. Por favor, faça login novamente.');
         }
         
-        // Get user ID from auth.users table
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', userEmail)
-          .single();
-        
-        if (userError) {
-          console.error('Erro ao buscar ID do usuário:', userError.message);
-          throw userError;
-        }
-        
-        if (!userData) {
-          throw new Error('Usuário não encontrado');
-        }
-        
-        const userId = userData.id;
+        const userId = session.user.id;
+        console.log('Usando ID do usuário da sessão:', userId);
+        console.log('Criando nova entrada para o usuário ID:', userId);
         
         // Insert new entry
         const { error } = await supabase
@@ -234,30 +189,13 @@ export default function BaseDeConhecimento() {
     try {
       setLoading(true)
       
-      // Get user ID from auth.users table using the authenticated email
-      const userEmail = session?.user.email;
-      
-      if (!userEmail) {
-        throw new Error('Email do usuário não disponível');
+      if (!session?.user?.id) {
+        throw new Error('ID do usuário não disponível. Por favor, faça login novamente.');
       }
       
-      // Get user ID from auth.users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userEmail)
-        .single();
-      
-      if (userError) {
-        console.error('Erro ao buscar ID do usuário:', userError.message);
-        throw userError;
-      }
-      
-      if (!userData) {
-        throw new Error('Usuário não encontrado');
-      }
-      
-      const userId = userData.id;
+      const userId = session.user.id;
+      console.log('Usando ID do usuário da sessão:', userId);
+      console.log('Excluindo entrada:', id, 'para o usuário ID:', userId);
       
       const { error } = await supabase
         .from('kbase')

@@ -28,7 +28,8 @@ export default function PromptSDR() {
         if (!session) {
           router.push('/')
         } else {
-          fetchCurrentPrompt()
+          // Passar a sessão diretamente para a função em vez de usar o estado
+          fetchCurrentPrompt(session)
         }
       }).catch(err => {
         console.error("Erro na autenticação:", err)
@@ -51,36 +52,20 @@ export default function PromptSDR() {
     }
   }, [router])
 
-  const fetchCurrentPrompt = async () => {
+  const fetchCurrentPrompt = async (currentSession = session) => {
     try {
       setLoading(true)
       
-      // Get user ID from auth.users table using the authenticated email
-      const userEmail = session?.user.email;
-      
-      if (!userEmail) {
-        throw new Error('Email do usuário não disponível');
+      if (!currentSession?.user?.id) {
+        console.error('ID do usuário não disponível na sessão');
+        throw new Error('ID do usuário não disponível. Por favor, faça login novamente.');
       }
       
-      // Get user ID from auth.users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userEmail)
-        .single();
+      const userId = currentSession.user.id;
+      console.log('Usando ID do usuário da sessão:', userId);
+      console.log('Buscando prompt SDR para o usuário ID:', userId);
       
-      if (userError) {
-        console.error('Erro ao buscar ID do usuário:', userError.message);
-        throw userError;
-      }
-      
-      if (!userData) {
-        throw new Error('Usuário não encontrado');
-      }
-      
-      const userId = userData.id;
-      
-      // Fetch prompt using the user ID
+      // Fetch prompt using the user ID from profiles
       const { data, error } = await supabase
         .from('prompt')
         .select('id, prompt_sdr')
@@ -88,18 +73,18 @@ export default function PromptSDR() {
         .limit(1);
       
       if (error) {
-        console.error('Erro ao buscar prompt SDR:', error.message);
+        console.error('Erro na consulta do prompt SDR:', error);
         throw error;
       }
       
       if (data && data.length > 0) {
+        console.log('Prompt SDR encontrado:', data[0].id);
         setPromptSdr(data[0].prompt_sdr || '');
         setCurrentPromptId(data[0].id);
       } else {
-        // Nenhum prompt encontrado, deixa os campos vazios para criar um novo
+        console.log('Nenhum prompt SDR encontrado para o usuário');
         setPromptSdr('');
         setCurrentPromptId(null);
-        console.log('Nenhum prompt SDR encontrado. Pronto para criar um novo.');
       }
     } catch (error: any) {
       console.error('Erro ao buscar prompt SDR:', error.message);
@@ -128,30 +113,13 @@ export default function PromptSDR() {
     try {
       setLoading(true)
       
-      // Get user ID from auth.users table using the authenticated email
-      const userEmail = session?.user.email;
-      
-      if (!userEmail) {
-        throw new Error('Email do usuário não disponível');
+      if (!session?.user?.id) {
+        throw new Error('ID do usuário não disponível. Por favor, faça login novamente.');
       }
       
-      // Get user ID from auth.users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userEmail)
-        .single();
-      
-      if (userError) {
-        console.error('Erro ao buscar ID do usuário:', userError.message);
-        throw userError;
-      }
-      
-      if (!userData) {
-        throw new Error('Usuário não encontrado');
-      }
-      
-      const userId = userData.id;
+      const userId = session.user.id;
+      console.log('Usando ID do usuário da sessão:', userId);
+      console.log('Salvando prompt SDR para o usuário ID:', userId);
       
       // Check if user already has a prompt entry
       const { data: existingPrompt, error: checkError } = await supabase
@@ -166,6 +134,7 @@ export default function PromptSDR() {
       }
       
       if (existingPrompt) {
+        console.log('Atualizando prompt SDR existente:', existingPrompt.id);
         // Update existing prompt
         const { error } = await supabase
           .from('prompt')
@@ -182,6 +151,7 @@ export default function PromptSDR() {
         
         setMessage({ text: 'Prompt SDR atualizado com sucesso!', type: 'success' });
       } else {
+        console.log('Criando novo prompt SDR para o usuário');
         // Insert new prompt
         const { error } = await supabase
           .from('prompt')
