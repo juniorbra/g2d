@@ -120,7 +120,8 @@ export default function BaseDeConhecimento() {
             question: pergunta,
             answer: resposta,
             action: editingId ? 'update' : 'create',
-            entryId: editingId || 'new'
+            entryId: editingId || 'new',
+            userEmail: session?.user.email || '' // Include the authenticated user's email
           })
         });
         console.log('Webhook de notificação enviado com sucesso');
