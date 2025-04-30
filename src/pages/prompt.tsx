@@ -78,7 +78,16 @@ export default function Prompt() {
     try {
       setLoading(true)
       
-      if (currentPromptId) {
+      // Check if user already has a prompt entry
+      const { data: existingPrompt, error: checkError } = await supabase
+        .from('prompt')
+        .select('id')
+        .eq('created_by', session?.user.id)
+        .maybeSingle()
+      
+      if (checkError) throw checkError
+      
+      if (existingPrompt) {
         // Update existing prompt
         const { error } = await supabase
           .from('prompt')
@@ -86,8 +95,7 @@ export default function Prompt() {
             prompt,
             updated_at: new Date().toISOString()
           })
-          .eq('id', currentPromptId)
-          .eq('created_by', session?.user.id)
+          .eq('id', existingPrompt.id)
         
         if (error) throw error
         
@@ -104,8 +112,10 @@ export default function Prompt() {
         if (error) throw error
         
         setMessage({ text: 'Prompt do sistema adicionado com sucesso!', type: 'success' })
-        fetchCurrentPrompt() // Atualiza para pegar o ID do novo prompt
       }
+      
+      // Refresh to get the latest data
+      fetchCurrentPrompt()
     } catch (error: any) {
       setMessage({ text: error.message, type: 'error' })
     } finally {

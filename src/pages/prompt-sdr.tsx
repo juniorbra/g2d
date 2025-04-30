@@ -102,7 +102,19 @@ export default function PromptSDR() {
     try {
       setLoading(true)
       
-      if (currentPromptId) {
+      // Check if user already has a prompt entry
+      const { data: existingPrompt, error: checkError } = await supabase
+        .from('prompt')
+        .select('id, prompt')
+        .eq('created_by', session?.user.id)
+        .maybeSingle()
+      
+      if (checkError) {
+        console.error('Erro ao verificar prompt existente:', checkError)
+        throw checkError
+      }
+      
+      if (existingPrompt) {
         // Update existing prompt
         const { error } = await supabase
           .from('prompt')
@@ -110,8 +122,7 @@ export default function PromptSDR() {
             prompt_sdr: promptSdr
             // Removido updated_at: new Date().toISOString() - já é tratado pelo trigger no banco
           })
-          .eq('id', currentPromptId)
-          .eq('created_by', session?.user.id)
+          .eq('id', existingPrompt.id)
         
         if (error) {
           console.error('Erro ao atualizar prompt SDR:', error)
@@ -135,8 +146,10 @@ export default function PromptSDR() {
         }
         
         setMessage({ text: 'Prompt SDR adicionado com sucesso!', type: 'success' })
-        fetchCurrentPrompt() // Atualiza para pegar o ID do novo prompt
       }
+      
+      // Refresh to get the latest data
+      fetchCurrentPrompt()
     } catch (error: any) {
       console.error('Erro ao salvar prompt SDR:', error)
       setMessage({ 
