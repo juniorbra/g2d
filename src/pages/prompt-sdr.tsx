@@ -58,6 +58,7 @@ export default function PromptSDR() {
       const { data, error } = await supabase
         .from('prompt')
         .select('id, prompt_sdr')
+        .eq('created_by', session?.user.id)
         .limit(1)
       
       if (error) {
@@ -110,6 +111,7 @@ export default function PromptSDR() {
             // Removido updated_at: new Date().toISOString() - já é tratado pelo trigger no banco
           })
           .eq('id', currentPromptId)
+          .eq('created_by', session?.user.id)
         
         if (error) {
           console.error('Erro ao atualizar prompt SDR:', error)

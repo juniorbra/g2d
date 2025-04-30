@@ -50,7 +50,8 @@ export default function Prompt() {
       const { data, error } = await supabase
         .from('prompt')
         .select('*')
-        .single()
+        .eq('created_by', session?.user.id)
+        .maybeSingle()
       
       if (error && error.code !== 'PGRST116') throw error
       
@@ -86,6 +87,7 @@ export default function Prompt() {
             updated_at: new Date().toISOString()
           })
           .eq('id', currentPromptId)
+          .eq('created_by', session?.user.id)
         
         if (error) throw error
         

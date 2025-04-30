@@ -53,6 +53,7 @@ export default function BaseDeConhecimento() {
       const { data, error } = await supabase
         .from('kbase')
         .select('*')
+        .eq('created_by', session?.user.id)
         .order('created_at', { ascending: false })
       
       if (error) throw error
@@ -89,6 +90,7 @@ export default function BaseDeConhecimento() {
             updated_at: new Date().toISOString()
           })
           .eq('id', editingId)
+          .eq('created_by', session?.user.id)
         
         if (error) throw error
         
@@ -160,6 +162,7 @@ export default function BaseDeConhecimento() {
         .from('kbase')
         .delete()
         .eq('id', id)
+        .eq('created_by', session?.user.id)
       
       if (error) throw error
       
