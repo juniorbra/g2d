@@ -55,34 +55,60 @@ export default function PromptSDR() {
     try {
       setLoading(true)
       
+      // Get user ID from auth.users table using the authenticated email
+      const userEmail = session?.user.email;
+      
+      if (!userEmail) {
+        throw new Error('Email do usuário não disponível');
+      }
+      
+      // Get user ID from auth.users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', userEmail)
+        .single();
+      
+      if (userError) {
+        console.error('Erro ao buscar ID do usuário:', userError.message);
+        throw userError;
+      }
+      
+      if (!userData) {
+        throw new Error('Usuário não encontrado');
+      }
+      
+      const userId = userData.id;
+      
+      // Fetch prompt using the user ID
       const { data, error } = await supabase
         .from('prompt')
         .select('id, prompt_sdr')
-        .eq('created_by', session?.user.id)
-        .limit(1)
+        .eq('created_by', userId)
+        .limit(1);
       
       if (error) {
-        console.error('Erro ao buscar prompt SDR:', error.message)
-        throw error
+        console.error('Erro ao buscar prompt SDR:', error.message);
+        throw error;
       }
       
       if (data && data.length > 0) {
-        setPromptSdr(data[0].prompt_sdr || '')
-        setCurrentPromptId(data[0].id)
+        setPromptSdr(data[0].prompt_sdr || '');
+        setCurrentPromptId(data[0].id);
       } else {
         // Nenhum prompt encontrado, deixa os campos vazios para criar um novo
-        setPromptSdr('')
-        setCurrentPromptId(null)
-        console.log('Nenhum prompt SDR encontrado. Pronto para criar um novo.')
+        setPromptSdr('');
+        setCurrentPromptId(null);
+        console.log('Nenhum prompt SDR encontrado. Pronto para criar um novo.');
       }
     } catch (error: any) {
-      console.error('Erro ao buscar prompt SDR:', error.message)
+      console.error('Erro ao buscar prompt SDR:', error.message);
       setMessage({ 
         text: `Não foi possível carregar o prompt SDR. ${error.code === 'PGRST116' ? 'Nenhum registro encontrado.' : 'Tente novamente mais tarde.'}`, 
         type: 'error' 
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -102,16 +128,41 @@ export default function PromptSDR() {
     try {
       setLoading(true)
       
+      // Get user ID from auth.users table using the authenticated email
+      const userEmail = session?.user.email;
+      
+      if (!userEmail) {
+        throw new Error('Email do usuário não disponível');
+      }
+      
+      // Get user ID from auth.users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', userEmail)
+        .single();
+      
+      if (userError) {
+        console.error('Erro ao buscar ID do usuário:', userError.message);
+        throw userError;
+      }
+      
+      if (!userData) {
+        throw new Error('Usuário não encontrado');
+      }
+      
+      const userId = userData.id;
+      
       // Check if user already has a prompt entry
       const { data: existingPrompt, error: checkError } = await supabase
         .from('prompt')
         .select('id, prompt')
-        .eq('created_by', session?.user.id)
-        .maybeSingle()
+        .eq('created_by', userId)
+        .maybeSingle();
       
       if (checkError) {
-        console.error('Erro ao verificar prompt existente:', checkError)
-        throw checkError
+        console.error('Erro ao verificar prompt existente:', checkError);
+        throw checkError;
       }
       
       if (existingPrompt) {
@@ -122,14 +173,14 @@ export default function PromptSDR() {
             prompt_sdr: promptSdr
             // Removido updated_at: new Date().toISOString() - já é tratado pelo trigger no banco
           })
-          .eq('id', existingPrompt.id)
+          .eq('id', existingPrompt.id);
         
         if (error) {
-          console.error('Erro ao atualizar prompt SDR:', error)
-          throw error
+          console.error('Erro ao atualizar prompt SDR:', error);
+          throw error;
         }
         
-        setMessage({ text: 'Prompt SDR atualizado com sucesso!', type: 'success' })
+        setMessage({ text: 'Prompt SDR atualizado com sucesso!', type: 'success' });
       } else {
         // Insert new prompt
         const { error } = await supabase
@@ -137,27 +188,27 @@ export default function PromptSDR() {
           .insert([{
             prompt: '', // Valor padrão para o campo obrigatório
             prompt_sdr: promptSdr,
-            created_by: session?.user.id
-          }])
+            created_by: userId
+          }]);
         
         if (error) {
-          console.error('Erro ao inserir prompt SDR:', error)
-          throw error
+          console.error('Erro ao inserir prompt SDR:', error);
+          throw error;
         }
         
-        setMessage({ text: 'Prompt SDR adicionado com sucesso!', type: 'success' })
+        setMessage({ text: 'Prompt SDR adicionado com sucesso!', type: 'success' });
       }
       
       // Refresh to get the latest data
-      fetchCurrentPrompt()
+      fetchCurrentPrompt();
     } catch (error: any) {
-      console.error('Erro ao salvar prompt SDR:', error)
+      console.error('Erro ao salvar prompt SDR:', error);
       setMessage({ 
         text: `Não foi possível salvar o prompt SDR. Por favor, tente novamente mais tarde.`, 
         type: 'error' 
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
