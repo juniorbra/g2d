@@ -56,7 +56,7 @@ export default function PromptSDR() {
       setLoading(true)
       
       const { data, error } = await supabase
-        .from('g2d_systemprompt')
+        .from('prompt')
         .select('id, prompt_sdr')
         .limit(1)
       
@@ -104,7 +104,7 @@ export default function PromptSDR() {
       if (currentPromptId) {
         // Update existing prompt
         const { error } = await supabase
-          .from('g2d_systemprompt')
+          .from('prompt')
           .update({
             prompt_sdr: promptSdr
             // Removido updated_at: new Date().toISOString() - já é tratado pelo trigger no banco
@@ -120,7 +120,7 @@ export default function PromptSDR() {
       } else {
         // Insert new prompt
         const { error } = await supabase
-          .from('g2d_systemprompt')
+          .from('prompt')
           .insert([{
             prompt: '', // Valor padrão para o campo obrigatório
             prompt_sdr: promptSdr,

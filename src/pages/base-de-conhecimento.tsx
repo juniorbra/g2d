@@ -51,7 +51,7 @@ export default function BaseDeConhecimento() {
       setLoading(true)
       
       const { data, error } = await supabase
-        .from('g2d_kbase')
+        .from('kbase')
         .select('*')
         .order('created_at', { ascending: false })
       
@@ -82,7 +82,7 @@ export default function BaseDeConhecimento() {
       if (editingId) {
         // Update existing entry
         const { error } = await supabase
-          .from('g2d_kbase')
+          .from('kbase')
           .update({
             question: pergunta,
             answer: resposta,
@@ -97,7 +97,7 @@ export default function BaseDeConhecimento() {
       } else {
         // Insert new entry
         const { error } = await supabase
-          .from('g2d_kbase')
+          .from('kbase')
           .insert([{
             question: pergunta,
             answer: resposta,
@@ -156,7 +156,7 @@ export default function BaseDeConhecimento() {
       setLoading(true)
       
       const { error } = await supabase
-        .from('g2d_kbase')
+        .from('kbase')
         .delete()
         .eq('id', id)
       
