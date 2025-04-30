@@ -10,6 +10,8 @@ type Profile = {
   birth_date: string | null
   phone: string | null
   address: string | null
+  wa_alert: string | null
+  wagroup_alert: string | null
   updated_at: string
 }
 
@@ -21,6 +23,8 @@ export default function Profile() {
   const [birthDate, setBirthDate] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [waAlert, setWaAlert] = useState('')
+  const [wagroupAlert, setWagroupAlert] = useState('')
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   
   const router = useRouter()
@@ -67,6 +71,8 @@ export default function Profile() {
         setBirthDate(data.birth_date || '')
         setPhone(data.phone || '')
         setAddress(data.address || '')
+        setWaAlert(data.wa_alert || '')
+        setWagroupAlert(data.wagroup_alert || '')
       } else {
         // Create a new profile if it doesn't exist
         const { error: insertError } = await supabase
@@ -95,6 +101,8 @@ export default function Profile() {
           birth_date: birthDate || null,
           phone: phone || null,
           address: address || null,
+          wa_alert: waAlert || null,
+          wagroup_alert: wagroupAlert || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', session?.user.id)
@@ -175,7 +183,7 @@ export default function Profile() {
             />
           </div>
           
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">
               Endereço
             </label>
@@ -184,6 +192,32 @@ export default function Profile() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               rows={3}
+            />
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Alerta WhatsApp (número)
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+              type="text"
+              value={waAlert}
+              onChange={(e) => setWaAlert(e.target.value)}
+              placeholder="Ex: +5511999999999"
+            />
+          </div>
+          
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Alerta grupo WhatsApp (descrição do grupo)
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+              type="text"
+              value={wagroupAlert}
+              onChange={(e) => setWagroupAlert(e.target.value)}
+              placeholder="Ex: Grupo de Alertas G2D"
             />
           </div>
           
