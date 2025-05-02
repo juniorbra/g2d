@@ -47,6 +47,8 @@ export default function Profile() {
       setSession(session)
       if (!session) {
         router.push('/')
+      } else {
+        fetchProfile(session)
       }
     })
 
@@ -57,15 +59,16 @@ export default function Profile() {
     try {
       setLoading(true)
       
-      const { data, error } = await supabase
+      // Verificar se o perfil já existe
+      const { data, error: selectError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .single()
       
-      if (error) throw error
-      
+      // Se o perfil existir, usar os dados existentes
       if (data) {
+        console.log('Perfil encontrado:', data);
         setProfile(data)
         setFullName(data.full_name || '')
         setBirthDate(data.birth_date || '')
@@ -73,13 +76,63 @@ export default function Profile() {
         setAddress(data.address || '')
         setWaAlert(data.wa_alert || '')
         setWagroupAlert(data.wagroup_alert || '')
-      } else {
-        // Create a new profile if it doesn't exist
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert([{ id: session.user.id }])
+      } 
+      // Se o perfil não existir (erro PGRST116 = não encontrado), criar um novo
+      else if (selectError && selectError.code === 'PGRST116') {
+        console.log('Perfil não encontrado, criando novo perfil');
         
-        if (insertError) throw insertError
+        // Verificar se já existe um perfil com este ID antes de criar
+        const { count, error: countError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('id', session.user.id)
+        
+        if (countError) throw countError
+        
+        // Só criar um novo perfil se realmente não existir
+        if (count === 0) {
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert([{ id: session.user.id }])
+            .select()
+          
+          if (insertError) throw insertError
+          
+          if (newProfile && newProfile.length > 0) {
+            setProfile(newProfile[0])
+            // Inicializar os campos com valores vazios
+            setFullName('')
+            setBirthDate('')
+            setPhone('')
+            setAddress('')
+            setWaAlert('')
+            setWagroupAlert('')
+          }
+        } else {
+          console.log('Perfil existe mas não foi possível recuperar, tentando novamente');
+          // Se o perfil existe mas não conseguimos recuperar, tentar novamente
+          const { data: retryData, error: retryError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (retryError) throw retryError
+          
+          if (retryData) {
+            setProfile(retryData)
+            setFullName(retryData.full_name || '')
+            setBirthDate(retryData.birth_date || '')
+            setPhone(retryData.phone || '')
+            setAddress(retryData.address || '')
+            setWaAlert(retryData.wa_alert || '')
+            setWagroupAlert(retryData.wagroup_alert || '')
+          }
+        }
+      } 
+      // Para outros erros, lançar exceção
+      else if (selectError) {
+        throw selectError
       }
     } catch (error: any) {
       console.error('Erro ao buscar perfil:', error.message)
@@ -94,20 +147,71 @@ export default function Profile() {
     try {
       setLoading(true)
       
-      const { error } = await supabase
+      // Buscar o perfil atual para preservar o número de telefone se não foi alterado
+      const { data: currentProfile, error: fetchError } = await supabase
         .from('profiles')
-        .update({
-          full_name: fullName,
-          birth_date: birthDate || null,
-          phone: phone || null,
-          address: address || null,
-          wa_alert: waAlert || null,
-          wagroup_alert: wagroupAlert || null,
-          updated_at: new Date().toISOString()
-        })
+        .select('*')
         .eq('id', session?.user.id)
+        .single()
       
-      if (error) throw error
+      // Se o campo de telefone estiver vazio e já existir um número no banco,
+      // usar o número existente para não apagá-lo
+      const phoneToUpdate = phone.trim() === '' && currentProfile?.phone 
+        ? currentProfile.phone 
+        : (phone || null)
+      
+      // Verificar se o perfil existe
+      if (currentProfile) {
+        // Se o perfil existe, atualizar
+        console.log('Atualizando perfil existente');
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            full_name: fullName,
+            birth_date: birthDate || null,
+            phone: phoneToUpdate,
+            address: address || null,
+            wa_alert: waAlert || null,
+            wagroup_alert: wagroupAlert || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', session?.user.id)
+        
+        if (error) throw error
+      } else if (fetchError && fetchError.code === 'PGRST116') {
+        // Se o perfil não existe, criar um novo
+        console.log('Criando novo perfil');
+        const { error } = await supabase
+          .from('profiles')
+          .insert([{ 
+            id: session?.user.id,
+            full_name: fullName,
+            birth_date: birthDate || null,
+            phone: phoneToUpdate,
+            address: address || null,
+            wa_alert: waAlert || null,
+            wagroup_alert: wagroupAlert || null,
+            updated_at: new Date().toISOString()
+          }])
+        
+        if (error) throw error
+      } else if (fetchError) {
+        throw fetchError
+      }
+      
+      // Verificar se o perfil foi realmente salvo
+      const { data: verifyProfile, error: verifyError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session?.user.id)
+        .single()
+      
+      if (verifyError) throw verifyError
+      
+      console.log('Perfil verificado após salvar:', verifyProfile);
+      
+      // Recarregar os dados do perfil após a atualização
+      fetchProfile(session as Session)
       
       setMessage({ text: 'Perfil atualizado com sucesso!', type: 'success' })
     } catch (error: any) {

@@ -6,7 +6,7 @@ import { Session } from '@supabase/supabase-js'
 
 type Profile = {
   id: string
-  phone: string | null
+  wa_number: string | null
   updated_at: string
 }
 
@@ -33,14 +33,16 @@ export default function Whatsapp() {
     })
 
     // Escutar mudanças na autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      if (!session) {
-        router.push('/')
-      }
-    })
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session)
+    if (!session) {
+      router.push('/')
+    } else {
+      fetchProfile(session)
+    }
+  })
 
     return () => subscription.unsubscribe()
   }, [router])
@@ -49,20 +51,21 @@ export default function Whatsapp() {
     try {
       setLoading(true)
       
-      const { data, error } = await supabase
+      // Verificar se o perfil já existe
+      const { data, error: selectError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .single()
       
-      if (error) throw error
-      
+      // Se o perfil existir, usar os dados existentes
       if (data) {
+        console.log('Perfil encontrado:', data);
         setProfile(data)
         
         // Se já existe um número de WhatsApp, formatar para exibição
-        if (data.phone) {
-          const phoneStr = data.phone.toString();
+        if (data.wa_number) {
+          const phoneStr = data.wa_number.toString();
           
           // Assumindo formato 5521982280802
           if (phoneStr.length >= 12) {
@@ -80,13 +83,67 @@ export default function Whatsapp() {
             setWhatsappNumber(phoneStr);
           }
         }
-      } else {
-        // Create a new profile if it doesn't exist
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert([{ id: session.user.id }])
+      } 
+      // Se o perfil não existir (erro PGRST116 = não encontrado), criar um novo
+      else if (selectError && selectError.code === 'PGRST116') {
+        console.log('Perfil não encontrado, criando novo perfil');
         
-        if (insertError) throw insertError
+        // Verificar se já existe um perfil com este ID antes de criar
+        const { count, error: countError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('id', session.user.id)
+        
+        if (countError) throw countError
+        
+        // Só criar um novo perfil se realmente não existir
+        if (count === 0) {
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert([{ id: session.user.id }])
+            .select()
+          
+          if (insertError) throw insertError
+          
+          if (newProfile && newProfile.length > 0) {
+            setProfile(newProfile[0])
+          }
+        } else {
+          console.log('Perfil existe mas não foi possível recuperar, tentando novamente');
+          // Se o perfil existe mas não conseguimos recuperar, tentar novamente
+          const { data: retryData, error: retryError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (retryError) throw retryError
+          
+          if (retryData) {
+            setProfile(retryData)
+            
+            if (retryData.wa_number) {
+              const phoneStr = retryData.wa_number.toString();
+              
+              if (phoneStr.length >= 12) {
+                const countryCodePart = phoneStr.substring(0, 2);
+                const cityCodePart = phoneStr.substring(2, 4);
+                const numberFirstPart = phoneStr.substring(4, phoneStr.length - 4);
+                const numberLastPart = phoneStr.substring(phoneStr.length - 4);
+                
+                setCountryCode(countryCodePart);
+                setCityCode(cityCodePart);
+                setWhatsappNumber(numberFirstPart + '-' + numberLastPart);
+              } else {
+                setWhatsappNumber(phoneStr);
+              }
+            }
+          }
+        }
+      } 
+      // Para outros erros, lançar exceção
+      else if (selectError) {
+        throw selectError
       }
     } catch (error: any) {
       console.error('Erro ao buscar perfil:', error.message)
@@ -141,20 +198,64 @@ export default function Whatsapp() {
       // Formatar o número para armazenamento: 5521982280802
       const formattedNumber = countryCode + cityCode + whatsappNumber.replace(/-/g, '');
       
-      const { error } = await supabase
+      // Primeiro, verificar se o perfil existe
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
-        .update({
-          phone: formattedNumber,
-          updated_at: new Date().toISOString()
-        })
+        .select('*')
         .eq('id', session?.user.id)
+        .single()
       
-    if (error) throw error
-    
-    // Recarregar os dados do perfil após a atualização
-    fetchProfile(session as Session)
-    
-    setMessage({ text: 'Número de WhatsApp atualizado com sucesso!', type: 'success' })
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError
+      }
+      
+      if (existingProfile) {
+        // Se o perfil existe, atualizar
+        console.log('Atualizando perfil existente com número de WhatsApp:', formattedNumber);
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            wa_number: formattedNumber,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', session?.user.id)
+        
+        if (error) throw error
+      } else {
+        // Se o perfil não existe, criar um novo
+        console.log('Criando novo perfil com número de WhatsApp:', formattedNumber);
+        const { error } = await supabase
+          .from('profiles')
+          .insert([{ 
+            id: session?.user.id,
+            wa_number: formattedNumber,
+            updated_at: new Date().toISOString()
+          }])
+        
+        if (error) throw error
+      }
+      
+      // Verificar se o número foi realmente salvo
+      const { data: verifyProfile, error: verifyError } = await supabase
+        .from('profiles')
+        .select('wa_number')
+        .eq('id', session?.user.id)
+        .single()
+      
+      if (verifyError) throw verifyError
+      
+      console.log('Número de WhatsApp verificado após salvar:', verifyProfile?.wa_number);
+      
+      if (!verifyProfile?.wa_number) {
+        console.error('Número de WhatsApp não foi salvo corretamente!');
+        setMessage({ text: 'Erro ao salvar o número. Por favor, tente novamente.', type: 'error' })
+        return
+      }
+      
+      // Recarregar os dados do perfil após a atualização
+      fetchProfile(session as Session)
+      
+      setMessage({ text: 'Número de WhatsApp cadastrado com sucesso!', type: 'success' })
     } catch (error: any) {
       setMessage({ text: error.message, type: 'error' })
     } finally {
