@@ -149,9 +149,12 @@ export default function Whatsapp() {
         })
         .eq('id', session?.user.id)
       
-      if (error) throw error
-      
-      setMessage({ text: 'Número de WhatsApp atualizado com sucesso!', type: 'success' })
+    if (error) throw error
+    
+    // Recarregar os dados do perfil após a atualização
+    fetchProfile(session as Session)
+    
+    setMessage({ text: 'Número de WhatsApp atualizado com sucesso!', type: 'success' })
     } catch (error: any) {
       setMessage({ text: error.message, type: 'error' })
     } finally {
